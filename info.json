@@ -1,0 +1,9 @@
+{
+    "name": "billys-autorun",
+    "version": "0.1.0",
+    "title": "Billy's Autorun",
+    "author": "Me",
+    "factorio_version": "1.1",
+    "dependencies": ["base >= 1.1"],
+    "description": "This mod implements my own flavor of autorun"
+}
