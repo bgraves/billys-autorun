@@ -1,76 +1,73 @@
 
+-- movement key pressed......walking = false
+-- 1st tick after keypress...walking = false
+-- 2nd tick after keypress...walking = true
+
+local OFF = 0
+local MOVEKEY_PRESSED = 1
+local READY = 2
+local ACTIVE = 3
 local function on_init()
     global.autorun_direction = nil
-    global.movekeys = {}
     global.enable = false
-end
-
-local direction_by_xy = {[-1]={}, [0]={}, [1]={}}
-direction_by_xy[ 0][ 1] = defines.direction.north 
-direction_by_xy[ 0][-1] = defines.direction.south 
-direction_by_xy[ 1][ 0] = defines.direction.east 
-direction_by_xy[-1][ 0] = defines.direction.west 
-direction_by_xy[ 1][ 1] = defines.direction.northeast 
-direction_by_xy[-1][ 1] = defines.direction.northwest 
-direction_by_xy[ 1][-1] = defines.direction.southeast 
-direction_by_xy[-1][-1] = defines.direction.southwest 
-
-local function get_direction_from_movekeys(movekeys)
-    local x, y = 0, 0
-    for movekey in pairs(movekeys) do
-        if movekey == 'move-up' then
-            y = y + 1
-        elseif movekey == 'move-down' then
-            y = y - 1
-        elseif movekey == 'move-left' then
-            x = x - 1
-        elseif movekey == 'move-right' then
-            x = x + 1
-        end
-    end
-    return direction_by_xy[x][y]
+    global.state = OFF
 end
 
 local player_index = 1
 local function on_tick()
-    -- needed for migration
-    if global.movekeys == nil then
-        global.movekeys = {}
-    end
-    local input_direction = get_direction_from_movekeys(global.movekeys)
-    if input_direction then
-        if global.autorun_direction == input_direction then
+    local player = game.get_player(player_index)
+    if global.state == OFF then
+        -- do nothing
+    elseif global.state == MOVEKEY_PRESSED then
+        global.state = READY
+    elseif global.state == READY then
+        if global.autorun_direction == player.walking_state.direction then
+            global.state = OFF
             global.autorun_direction = nil
         else
-            global.autorun_direction = input_direction
+            global.state = ACTIVE
+            global.autorun_direction = player.walking_state.direction
         end
-    end
-    local player = game.get_player(player_index)
-    if global.enable and global.autorun_direction and not input_direction then
+    elseif global.state == ACTIVE then
         player.walking_state = {
             walking = true,
             direction = player.walking_state.direction,
         }
     end
-    global.movekeys = {}
+end
+
+local function disable_autorun()
+    global.enable = false
+    global.state = OFF
+    global.autorun_direction = nil
+    game.print('Autorun disabled.')
+end
+
+local function enable_autorun()
+    global.enable = true
+    local player = game.get_player(player_index)
+    if player.walking_state.walking then
+        global.state = ACTIVE
+        global.autorun_direction = player.walking_state.direction
+    else
+        global.state = OFF
+        global.autorun_direction = nil
+    end
+    game.print('Autorun enabled.')
 end
 
 local function toggle_autorun()
-    global.enable = not global.enable
     if global.enable then
-        local player = game.get_player(player_index)
-        -- this helps with the case where we enable while already moving
-        if player.walking_state.walking then
-            global.autorun_direction = player.walking_state.direction
-        end
-        game.print('Autorun enabled.')
+        disable_autorun()
     else
-        game.print('Autorun disabled.')
+        enable_autorun()
     end
 end
 
-local function flag_movekey(event)
-    global.movekeys[event.input_name] = true
+local function on_movekey(event)
+    if global.enable then
+        global.state = MOVEKEY_PRESSED
+    end
 end
 
 script.on_init(on_init)
@@ -83,6 +80,6 @@ local movekeys = {
     'move-right',
 }
 for _, movekey in ipairs(movekeys) do
-    script.on_event(movekey, flag_movekey)
+    script.on_event(movekey, on_movekey)
 end
 
