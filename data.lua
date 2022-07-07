@@ -29,22 +29,4 @@ data:extend({
         key_sequence = "",
         linked_game_control = "move-left"
     },
-    {
-        type = "custom-input",
-        name = "mine",
-        key_sequence = "",
-        linked_game_control = "mine"
-    },
-    {
-        type = "custom-input",
-        name = "shoot-selected",
-        key_sequence = "",
-        linked_game_control = "shoot-selected"
-    },
-    {
-        type = "custom-input",
-        name = "shoot-enemy",
-        key_sequence = "",
-        linked_game_control = "shoot-enemy"
-    },
 })
