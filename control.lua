@@ -12,6 +12,7 @@ local READY = 2
 local ACTIVE = 3
 
 local enable = false
+local same_direction_cancels = false
 
 local function copy(tbl)
     local clone = {}
@@ -27,7 +28,7 @@ local state = {
 }
 local prev_state = copy(state)
 
--- hardcoding player_index so it'll only work in single player
+-- hardcoding player_index; it'll only work in single player
 local player_index = 1
 local function on_tick(event)
     local player = game.get_player(player_index)
@@ -41,7 +42,7 @@ local function on_tick(event)
         if not player.walking_state.walking then
             -- this should happen when in a menu which disables or hijacks the movekeys
             state = copy(prev_state)
-        elseif state.autorun_direction == player.walking_state.direction then
+        elseif same_direction_cancels and state.autorun_direction == player.walking_state.direction then
             -- autorun is canceled by moving in the same direction as autorun
             state.mode = OFF
             state.autorun_direction = nil
@@ -87,6 +88,11 @@ local function toggle_autorun()
     end
 end
 
+local function stop_running()
+    state.mode = OFF
+    state.autorun_direction = nil
+end
+
 local function on_movekey(event)
     local player = game.get_player(player_index)
     if enable then
@@ -96,6 +102,7 @@ end
 
 script.on_event(defines.events.on_tick, on_tick)
 script.on_event('toggle-autorun', toggle_autorun)
+script.on_event('stop-running', stop_running)
 local movekeys = {
     'move-up',
     'move-down',

@@ -2,7 +2,13 @@ data:extend({
     {
         type = "custom-input",
         name = "toggle-autorun",
-        key_sequence = "mouse-button-5",
+        key_sequence = "",
+        consuming = "none"
+    },
+    {
+        type = "custom-input",
+        name = "stop-running",
+        key_sequence = "",
         consuming = "none"
     },
     {
