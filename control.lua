@@ -1,46 +1,57 @@
 
 --[[
-went through quite a few iterations of this
-in the end it works like this:
-    1. a movement key is pressed
-    2. wait a tick and see how the player moves
-    3. latch that movement if it's different than our existing autorun direction
-the reason this was difficult is because there's no indication of key-up events
-that means it's tough to tell if the player is holding 2 keys simultaneously
-or if they've already release the first key
-for this reason we have to rely on the player movement direction
+Walking State Details
+    1. Movement key pressed......walking = false
+    2. 1st tick after keypress...walking = false
+    3. 2nd tick after keypress...walking = true
 --]]
-
--- movement key pressed......walking = false
--- 1st tick after keypress...walking = false
--- 2nd tick after keypress...walking = true
 
 local OFF = 0
 local MOVEKEY_PRESSED = 1
 local READY = 2
 local ACTIVE = 3
-local function on_init()
-    global.autorun_direction = nil
-    global.enable = false
-    global.state = OFF
+
+local enable = false
+
+local function copy(tbl)
+    local clone = {}
+    for key, value in pairs(tbl) do
+        clone[key] = value
+    end
+    return clone
 end
 
+local state = {
+    mode = OFF,
+    autorun_direction = nil,
+}
+local prev_state = copy(state)
+
+-- hardcoding player_index so it'll only work in single player
 local player_index = 1
-local function on_tick()
+local function on_tick(event)
     local player = game.get_player(player_index)
-    if global.state == OFF then
-        -- do nothing
-    elseif global.state == MOVEKEY_PRESSED then
-        global.state = READY
-    elseif global.state == READY then
-        if global.autorun_direction == player.walking_state.direction then
-            global.state = OFF
-            global.autorun_direction = nil
+    if state.mode == OFF then
+        -- we maintain a fresh prev_state only in OFF and ACTIVE modes
+        prev_state = copy(state)
+    elseif state.mode == MOVEKEY_PRESSED then
+        -- this mode is just to skip the 1st tick after a movekey is pressed since the player.walking_state won't reflect the input until the next tick
+        state.mode = READY
+    elseif state.mode == READY then
+        if not player.walking_state.walking then
+            -- this should happen when in a menu which disables or hijacks the movekeys
+            state = copy(prev_state)
+        elseif state.autorun_direction == player.walking_state.direction then
+            -- autorun is canceled by moving in the same direction as autorun
+            state.mode = OFF
+            state.autorun_direction = nil
         else
-            global.state = ACTIVE
-            global.autorun_direction = player.walking_state.direction
+            state.mode = ACTIVE
+            state.autorun_direction = player.walking_state.direction
         end
-    elseif global.state == ACTIVE then
+    elseif state.mode == ACTIVE then
+        -- we maintain a fresh prev_state only in OFF and ACTIVE modes
+        prev_state = copy(state)
         player.walking_state = {
             walking = true,
             direction = player.walking_state.direction,
@@ -49,27 +60,27 @@ local function on_tick()
 end
 
 local function disable_autorun()
-    global.enable = false
-    global.state = OFF
-    global.autorun_direction = nil
+    enable = false
+    state.mode = OFF
+    state.autorun_direction = nil
     game.print('Autorun disabled.')
 end
 
 local function enable_autorun()
-    global.enable = true
+    enable = true
     local player = game.get_player(player_index)
     if player.walking_state.walking then
-        global.state = ACTIVE
-        global.autorun_direction = player.walking_state.direction
+        state.mode = ACTIVE
+        state.autorun_direction = player.walking_state.direction
     else
-        global.state = OFF
-        global.autorun_direction = nil
+        state.mode = OFF
+        state.autorun_direction = nil
     end
     game.print('Autorun enabled.')
 end
 
 local function toggle_autorun()
-    if global.enable then
+    if enable then
         disable_autorun()
     else
         enable_autorun()
@@ -77,12 +88,12 @@ local function toggle_autorun()
 end
 
 local function on_movekey(event)
-    if global.enable then
-        global.state = MOVEKEY_PRESSED
+    local player = game.get_player(player_index)
+    if enable then
+        state.mode = MOVEKEY_PRESSED
     end
 end
 
-script.on_init(on_init)
 script.on_event(defines.events.on_tick, on_tick)
 script.on_event('toggle-autorun', toggle_autorun)
 local movekeys = {
