@@ -1,4 +1,16 @@
 
+--[[
+went through quite a few iterations of this
+in the end it works like this:
+    1. a movement key is pressed
+    2. wait a tick and see how the player moves
+    3. latch that movement if it's different than our existing autorun direction
+the reason this was difficult is because there's no indication of key-up events
+that means it's tough to tell if the player is holding 2 keys simultaneously
+or if they've already release the first key
+for this reason we have to rely on the player movement direction
+--]]
+
 -- movement key pressed......walking = false
 -- 1st tick after keypress...walking = false
 -- 2nd tick after keypress...walking = true
