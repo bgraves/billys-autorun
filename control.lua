@@ -51,6 +51,9 @@ local function common_conditionals(player)
         game.print('Autorun disabled')
         state.mode = modes.DISABLED
         state.autorun_direction = nil
+    elseif flags.stopkey_pressed then
+        state.mode = modes.STATIONARY
+        state.autorun_direction = nil
     elseif flags.movekey_pressed then
         state.mode = modes.WAIT_A_TICK
     elseif player.mining_state.mining then
@@ -59,9 +62,6 @@ local function common_conditionals(player)
         -- desired direction. That means we need to wait a tick after mining
         -- finishes and then check how the player is moving.
         state.mode = modes.WAIT_A_TICK
-    elseif flags.stopkey_pressed then
-        state.mode = modes.STATIONARY
-        state.autorun_direction = nil
     else
         some_condition_met = false
     end
