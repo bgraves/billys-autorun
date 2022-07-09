@@ -6,13 +6,17 @@ Walking State Details
     3. 2nd tick after keypress...walking = true
 --]]
 
-local OFF = 0
-local WAIT_A_TICK = 1
-local CHECK_WALKING_STATE = 2
-local AUTORUNNING = 3
+local DISABLED = 0
+local STATIONARY = 1
+local WAIT_A_TICK = 2
+local CHECK_WALKING_STATE = 3
+local AUTORUNNING = 4
 
-local enable = false
-local same_direction_cancels = false
+local flags = {
+    feature_toggled = false,
+    movekey_pressed = false,
+    stopkey_pressed = false,
+}
 
 local function copy(tbl)
     local clone = {}
@@ -23,7 +27,7 @@ local function copy(tbl)
 end
 
 local state = {
-    mode = OFF,
+    mode = STATIONARY,
     autorun_direction = nil,
 }
 local prev_state = copy(state)
@@ -32,82 +36,95 @@ local prev_state = copy(state)
 local player_index = 1
 local function on_tick(event)
     local player = game.get_player(player_index)
-    if player.mining_state.mining then
-        -- When mining, movement is disabled. If you push down movement keys during the mining and hold them until mining finishes, we want to move according to those keys. The only way to do that is to hand over control to the normal movement for a tick
-        state.mode = WAIT_A_TICK
-    end
-    if state.mode == OFF then
-        -- we maintain a fresh prev_state only in OFF and AUTORUNNING modes
+    local next_mode = nil
+    if state.mode == DISABLED then
+        if flags.feature_toggled then
+            game.print('Autorun enabled')
+            if player.walking_state.walking then
+                state.mode = AUTORUNNING
+                state.autorun_direction = player.walking_state.direction
+            else
+                state.mode = STATIONARY
+                state.autorun_direction = nil
+            end
+        else
+            state.mode = DISABLED
+        end
+    elseif state.mode == STATIONARY then
         prev_state = copy(state)
-    elseif state.mode == WAIT_A_TICK then
-        -- this mode is just to skip the 1st tick after a movekey is pressed since the player.walking_state won't reflect the input until the next tick
-        state.mode = CHECK_WALKING_STATE
-    elseif state.mode == CHECK_WALKING_STATE then
-        if not player.walking_state.walking then
-            -- this should happen when in a menu which disables or hijacks the movekeys
-            state = copy(prev_state)
-        elseif same_direction_cancels and state.autorun_direction == player.walking_state.direction then
-            -- autorun is canceled by moving in the same direction as autorun
-            state.mode = OFF
+        if flags.feature_toggled then
+            state.mode = DISABLED
             state.autorun_direction = nil
+        elseif flags.movekey_pressed then
+            state.mode = WAIT_A_TICK
+        elseif player.mining_state.mining then
+            state.mode = WAIT_A_TICK
+        else
+            state.mode = STATIONARY
+        end
+    elseif state.mode == WAIT_A_TICK then
+        if flags.feature_toggled then
+            state.mode = DISABLED
+            state.autorun_direction = nil
+        elseif flags.movekey_pressed then
+            state.mode = WAIT_A_TICK
+        elseif player.mining_state.mining then
+            state.mode = WAIT_A_TICK
+        else
+            state.mode = CHECK_WALKING_STATE
+        end
+    elseif state.mode == CHECK_WALKING_STATE then
+        if flags.feature_toggled then
+            state.mode = DISABLED
+            state.autorun_direction = nil
+        elseif flags.movekey_pressed then
+            state.mode = WAIT_A_TICK
+        elseif player.mining_state.mining then
+            state.mode = WAIT_A_TICK
+        elseif not player.walking_state.walking then
+            state = copy(prev_state)
         else
             state.mode = AUTORUNNING
             state.autorun_direction = player.walking_state.direction
         end
     elseif state.mode == AUTORUNNING then
-        -- we maintain a fresh prev_state only in OFF and AUTORUNNING modes
         prev_state = copy(state)
-        -- important to use state.autorun_direction here. The problem with player.walking_state.direction is that when mining, it can be different from the direction we were actually moving
         player.walking_state = {
             walking = true,
             direction = state.autorun_direction,
         }
-    end
-end
-
-local function disable_autorun()
-    enable = false
-    state.mode = OFF
-    state.autorun_direction = nil
-    game.print('Autorun disabled.')
-end
-
-local function enable_autorun()
-    enable = true
-    local player = game.get_player(player_index)
-    if player.walking_state.walking then
-        state.mode = AUTORUNNING
-        state.autorun_direction = player.walking_state.direction
+        if flags.feature_toggled then
+            state.mode = DISABLED
+            state.autorun_direction = nil
+        elseif flags.movekey_pressed then
+            state.mode = WAIT_A_TICK
+        elseif player.mining_state.mining then
+            state.mode = WAIT_A_TICK
+        elseif flags.stopkey_pressed then
+            state.mode = STATIONARY
+            state.autorun_direction = nil
+        else
+            state.mode = AUTORUNNING
+        end
     else
-        state.mode = OFF
+        game.print('Autorun reached invalid state')
+        state.mode = DISABLED
         state.autorun_direction = nil
     end
-    game.print('Autorun enabled.')
-end
-
-local function toggle_autorun()
-    if enable then
-        disable_autorun()
-    else
-        enable_autorun()
+    for flag in pairs(flags) do
+        flags[flag] = false
     end
 end
 
-local function stop_running()
-    state.mode = OFF
-    state.autorun_direction = nil
-end
-
-local function on_movekey(event)
-    local player = game.get_player(player_index)
-    if enable then
-        state.mode = WAIT_A_TICK
+local function set_flag(flag)
+    return function ()
+         flags[flag] = true
     end
 end
 
 script.on_event(defines.events.on_tick, on_tick)
-script.on_event('toggle-autorun', toggle_autorun)
-script.on_event('stop-running', stop_running)
+script.on_event('toggle-autorun', set_flag('feature_toggled'))
+script.on_event('stop-running', set_flag('stopkey_pressed'))
 local movekeys = {
     'move-up',
     'move-down',
@@ -115,6 +132,6 @@ local movekeys = {
     'move-right',
 }
 for _, movekey in ipairs(movekeys) do
-    script.on_event(movekey, on_movekey)
+    script.on_event(movekey, set_flag('movekey_pressed'))
 end
 
