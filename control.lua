@@ -113,6 +113,9 @@ local function on_tick(event)
     elseif state.mode == modes.AUTORUNNING then
         rollback_state = copy(state)
         -- this is what actually causes the player to autorun
+        if state.autorun_direction == nil then
+            print('autorun_direction == nil')
+        end
         player.walking_state = {
             walking = true,
             direction = state.autorun_direction,
