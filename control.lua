@@ -51,6 +51,9 @@ local function common_conditionals(player)
         game.print('Autorun disabled')
         state.mode = modes.DISABLED
         state.autorun_direction = nil
+    elseif player.controller_type ~= defines.controllers.character then
+        state.mode = modes.STATIONARY
+        state.autorun_direction = nil
     elseif flags.stopkey_pressed then
         state.mode = modes.STATIONARY
         state.autorun_direction = nil
