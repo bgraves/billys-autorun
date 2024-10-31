@@ -149,6 +149,10 @@ local function on_tick_single(event, player, autorun_info)
 end
 
 local function on_tick(event)
+    -- this handles when mod is added while game is in progress
+    if storage.info_by_player == nil then
+        storage.info_by_player = {}
+    end
     local players_to_remove = {}
     for player_index, autorun_info in pairs(storage.info_by_player) do
         local player = game.get_player(player_index)
