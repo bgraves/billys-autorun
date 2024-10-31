@@ -2,7 +2,7 @@
     "name": "billys-autorun",
     "version": "0.4.0",
     "title": "Billy's Autorun",
-    "author": "Me",
+    "author": "bgraves",
     "factorio_version": "2.0",
     "dependencies": ["base >= 2.0"],
     "description": "This mod implements my own flavor of autorun"
