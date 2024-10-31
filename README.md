@@ -1,7 +1,7 @@
 # billys-autorun
 Factorio autorun mod
 
-Based on https://mods.factorio.com/mod/tackleautorun
+Inspired by https://mods.factorio.com/mod/tackleautorun
 
 # Usage
 By default, the feature is disabled and all movement is normal. To enable it, use the "Toggle autorun" hotkey you've assigned (e.g. mouse button 5). When enabled, moving in a direction will latch that movement. If you move in a different direction, that movement will be latched instead. The only way to stop is to press the "Stop running" hotkey (e.g. spacebar).
